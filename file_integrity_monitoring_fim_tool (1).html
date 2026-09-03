@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisGuard FIM - File Integrity Monitoring System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Tailwind Configuration -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            cyber: {
+              dark: '#080b11',
+              card: '#101624',
+              cardLight: '#161f33',
+              border: '#1e293b',
+              accent: '#06b6d4',
+              alert: '#f43f5e',
+              success: '#10b981',
+              warning: '#f59e0b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #07090e;
+      color: #e2e8f0;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #0d131f;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.45)); }
+      50% { opacity: 0.7; filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.2)); }
+    }
+    .glow-alert {
+      animation: pulse-glow 2s infinite ease-in-out;
+    }
+    .diff-line-added {
+      background-color: rgba(16, 185, 129, 0.15);
+      border-left: 3px solid #10b981;
+      color: #6ee7b7;
+    }
+    .diff-line-removed {
+      background-color: rgba(244, 63, 94, 0.18);
+      border-left: 3px solid #f43f5e;
+      color: #fda4af;
+    }
+    .diff-line-same {
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen font-sans antialiased flex flex-col bg-[#07090e]">
+
+  <!-- Top Header Navigation -->
+  <header class="border-b border-cyber-border bg-[#0d1322]/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-lg text-white tracking-tight">AegisGuard <span class="text-cyan-400 text-sm font-mono font-medium">FIM-X</span></h1>
+            <span class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Watchdog
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">File Integrity Monitoring & Detailed Cryptographic Criteria Engine</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button id="btn-run-scan" onclick="runIntegrityScan()" class="flex items-center space-x-2 px-3.5 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs font-medium transition shadow-sm">
+          <i data-lucide="scan" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Verify All Integrity</span>
+        </button>
+        <button id="btn-baseline" onclick="captureBaselineModal()" class="flex items-center space-x-2 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-medium transition shadow-lg shadow-emerald-700/20">
+          <i data-lucide="fingerprint" class="w-4 h-4"></i>
+          <span>Establish Baseline</span>
+        </button>
+        <button onclick="togglePythonCodeModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 transition">
+          <i data-lucide="code-2" class="w-4 h-4 text-amber-400"></i>
+          <span class="hidden md:inline">Python Engine Code</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top KPI Status Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Total Monitored Files</p>
+          <h3 id="stat-monitored-count" class="text-2xl font-bold text-white mt-1">0</h3>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <i data-lucide="folder-tree" class="w-3 h-3 text-cyan-400"></i> Active file descriptors
+          </p>
+        </div>
+        <div class="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/20 text-cyan-400">
+          <i data-lucide="file-check-2" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Active Integrity Alerts</p>
+          <h3 id="stat-alerts-count" class="text-2xl font-bold text-rose-500 mt-1">0</h3>
+          <p id="stat-alerts-desc" class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+            <i data-lucide="check-circle-2" class="w-3 h-3"></i> All hashes match baseline
+          </p>
+        </div>
+        <div id="stat-alerts-icon-box" class="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400">
+          <i data-lucide="shield-alert" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400">System Integrity Health</p>
+          <h3 id="stat-health-score" class="text-2xl font-bold text-emerald-400 mt-1">100%</h3>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <i data-lucide="cpu" class="w-3 h-3 text-emerald-400"></i> SHA-256 Engine Active
+          </p>
+        </div>
+        <div class="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
+          <i data-lucide="activity" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Criteria Engine Status</p>
+          <h3 id="stat-baseline-status" class="text-base font-bold text-amber-400 mt-1">7 Criteria Active</h3>
+          <p id="stat-last-scan" class="text-xs text-slate-500 mt-1">Last scan: Just now</p>
+        </div>
+        <div class="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20 text-amber-400">
+          <i data-lucide="list-checks" class="w-6 h-6"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat Simulation Console -->
+    <div class="bg-gradient-to-r from-slate-900 via-cyber-card to-slate-900 border border-cyber-border rounded-xl p-4 sm:p-5 shadow-lg relative overflow-hidden">
+      <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2 py-0.5 text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded">DEMO & TAMPER LAB</span>
+            <h2 class="text-base font-bold text-white tracking-wide">Threat & Tamper Simulation Console</h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+            Simulate cyber attacks on specific critical files to evaluate how the criteria engine triggers checksum alerts, permission warnings, and forensic diffs.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="simulateAttack('webshell')" class="px-3 py-1.5 text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg flex items-center gap-1.5 transition">
+            <i data-lucide="bug" class="w-3.5 h-3.5 text-rose-400"></i>
+            <span>Inject Web Shell</span>
+          </button>
+          <button onclick="simulateAttack('passwd')" class="px-3 py-1.5 text-xs font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-lg flex items-center gap-1.5 transition">
+            <i data-lucide="user-x" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Add Rogue /etc/passwd</span>
+          </button>
+          <button onclick="simulateAttack('delete')" class="px-3 py-1.5 text-xs font-medium bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 rounded-lg flex items-center gap-1.5 transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-400"></i>
+            <span>Delete Sensitive File</span>
+          </button>
+          <button onclick="simulateAttack('perms')" class="px-3 py-1.5 text-xs font-medium bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 rounded-lg flex items-center gap-1.5 transition">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>Chmod 777 Exploit</span>
+          </button>
+          <button onclick="resetFileSystem()" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg flex items-center gap-1.5 transition">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Restore Pristine Files</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center justify-between border-b border-cyber-border pb-2 overflow-x-auto">
+      <div class="flex space-x-1 sm:space-x-3 text-sm font-medium">
+        <button id="tab-btn-files" onclick="switchTab('files')" class="px-3.5 py-2 rounded-lg bg-cyber-card text-cyan-400 border border-cyber-border font-semibold flex items-center gap-2 text-xs sm:text-sm">
+          <i data-lucide="file-code" class="w-4 h-4"></i>
+          <span>Monitored File Directory</span>
+          <span id="badge-file-count" class="px-1.5 py-0.5 text-[10px] bg-cyan-500/20 text-cyan-300 rounded-full">5</span>
+        </button>
+        
+        <!-- NEW SPECIFIC FILE DETAILS TAB -->
+        <button id="tab-btn-inspector" onclick="switchTab('inspector')" class="px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2 text-xs sm:text-sm relative">
+          <i data-lucide="scan-search" class="w-4 h-4 text-cyan-400"></i>
+          <span>File Forensic Inspector</span>
+          <span class="px-1.5 py-0.2 text-[9px] bg-cyan-500/30 text-cyan-300 rounded uppercase font-bold tracking-wider">Criteria</span>
+        </button>
+
+        <button id="tab-btn-alerts" onclick="switchTab('alerts')" class="px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2 text-xs sm:text-sm">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span>Alert Center</span>
+          <span id="badge-alert-count" class="px-1.5 py-0.5 text-[10px] bg-rose-500/20 text-rose-300 rounded-full">0</span>
+        </button>
+
+        <button id="tab-btn-audit" onclick="switchTab('audit')" class="px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2 text-xs sm:text-sm">
+          <i data-lucide="history" class="w-4 h-4"></i>
+          <span>Audit Trail</span>
+        </button>
+
+        <button id="tab-btn-custom" onclick="switchTab('custom')" class="px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2 text-xs sm:text-sm">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          <span>Hash Real User File</span>
+        </button>
+      </div>
+
+      <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400">
+        <span class="inline-flex items-center px-2.5 py-1 rounded bg-slate-900 border border-slate-800 font-mono text-[11px]">
+          Algorithm: <strong class="text-cyan-400 ml-1">SHA-256 (256-bit)</strong>
+        </span>
+      </div>
+    </div>
+
+    <!-- TAB 1: FILE LIST DIRECTORY -->
+    <div id="tab-view-files" class="space-y-4">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-cyber-card p-3 rounded-xl border border-cyber-border">
+        <div class="flex-1 relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-3"></i>
+          <input type="text" id="file-search-input" onkeyup="filterFileList()" placeholder="Filter by filepath, hash, or status..." class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono">
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="openAddFileModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+            <span>Add File to Watch</span>
+          </button>
+          <button onclick="exportBaselineJSON()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition" title="Export Baseline Database as JSON">
+            <i data-lucide="download" class="w-4 h-4 text-cyan-400"></i>
+            <span>Export DB</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- File Table Container -->
+      <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden shadow">
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-mono border-b border-cyber-border">
+              <tr>
+                <th class="py-3 px-4">File Path & Descriptor</th>
+                <th class="py-3 px-4">Permissions / Owner</th>
+                <th class="py-3 px-4">SHA-256 Checksum (Current)</th>
+                <th class="py-3 px-4">Criteria Verdict</th>
+                <th class="py-3 px-4">Integrity Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="file-table-body" class="divide-y divide-cyber-border text-slate-300">
+              <!-- Dynamically populated files -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SPECIFIC FILE FORENSIC INSPECTOR & CRITERIA VIEW (NEW DEDICATED VIEW) -->
+    <div id="tab-view-inspector" class="space-y-6 hidden">
+      
+      <!-- Top File Selector Card -->
+      <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <i data-lucide="file-search" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Specific File Criteria & Forensic Inspector</h3>
+            <p class="text-xs text-slate-400">Inspect cryptographic hashes, POSIX permissions, byte differences, and threat indicators.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <label class="text-xs font-mono text-slate-400">Select File:</label>
+          <select id="inspector-file-select" onchange="onInspectorSelectFile(this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 min-w-[260px]">
+            <!-- Populated dynamically with file paths -->
+          </select>
+          <button onclick="recheckCurrentInspectorFile()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700" title="Re-evaluate Criteria">
+            <i data-lucide="refresh-cw" class="w-4 h-4 text-cyan-400"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Specific File Detail Grid Container -->
+      <div id="inspector-details-view" class="space-y-6">
+        <!-- Rendered dynamically by renderFileInspectorDetails() -->
+      </div>
+
+    </div>
+
+    <!-- TAB 3: ALERT LOGS VIEW -->
+    <div id="tab-view-alerts" class="space-y-4 hidden">
+      <div class="flex items-center justify-between bg-cyber-card p-4 rounded-xl border border-cyber-border">
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
+            Integrity Alert Log & Discrepancy Diagnostics
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Any divergence from the established SHA-256 cryptographic baseline creates a high-priority alert.</p>
+        </div>
+        <button onclick="clearAlerts()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 flex items-center gap-1">
+          <i data-lucide="check-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Acknowledge All</span>
+        </button>
+      </div>
+
+      <div id="alert-list-container" class="space-y-3">
+        <!-- Rendered Alert Cards -->
+      </div>
+    </div>
+
+    <!-- TAB 4: AUDIT TRAIL -->
+    <div id="tab-view-audit" class="space-y-4 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-cyber-card p-4 rounded-xl border border-cyber-border">
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-cyan-400"></i>
+            Immutable Audit Trail & Event Forensics
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Chronological record of every file modification, permission escalation, and baseline check.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="exportAuditReport('csv')" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Export CSV</span>
+          </button>
+          <button onclick="printSecurityReport()" class="px-3 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg flex items-center gap-1.5 shadow">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span>Generate Security Report</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+        <div class="max-h-[500px] overflow-y-auto custom-scroll">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-mono border-b border-cyber-border sticky top-0">
+              <tr>
+                <th class="py-2.5 px-4">Timestamp</th>
+                <th class="py-2.5 px-4">Event Severity</th>
+                <th class="py-2.5 px-4">Event Type</th>
+                <th class="py-2.5 px-4">File Path</th>
+                <th class="py-2.5 px-4">Details</th>
+              </tr>
+            </thead>
+            <tbody id="audit-log-body" class="divide-y divide-cyber-border text-slate-300 font-mono text-[11px]">
+              <!-- Dynamically populated logs -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: REAL FILE HASHER -->
+    <div id="tab-view-custom" class="space-y-4 hidden">
+      <div class="bg-cyber-card border border-cyber-border rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-1">
+          <i data-lucide="binary" class="w-4 h-4 text-cyan-400"></i>
+          Client-Side Web Crypto SHA-256 File Hasher
+        </h3>
+        <p class="text-xs text-slate-400 mb-4">
+          Test real files from your local computer. Files never leave your browser—they are processed using the native Web Cryptography API (`crypto.subtle.digest`) at hardware speeds.
+        </p>
+
+        <!-- Dropzone -->
+        <div id="dropzone" class="border-2 border-dashed border-cyber-border hover:border-cyan-500/60 rounded-xl p-8 text-center transition bg-slate-900/40 cursor-pointer" onclick="document.getElementById('real-file-input').click()">
+          <input type="file" id="real-file-input" class="hidden" onchange="handleUserFileUpload(event)" multiple>
+          <div class="flex flex-col items-center justify-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+              <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-slate-200">Click to upload or drag & drop files here</p>
+              <p class="text-xs text-slate-500 mt-1">Accepts any file (code, docs, binary, images) up to 200MB</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="real-file-results" class="mt-6 hidden">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 font-mono">Calculated Cryptographic Signatures</h4>
+          <div class="space-y-2" id="real-file-list">
+            <!-- Results injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FILE CONTENT & METADATA EDITOR MODAL -->
+  <div id="file-editor-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-cyber-card border border-cyber-border rounded-xl max-w-3xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between p-4 border-b border-cyber-border bg-slate-900/80">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="file-edit" class="w-5 h-5 text-cyan-400"></i>
+          <div>
+            <h3 id="modal-file-name" class="text-sm font-bold text-white font-mono">/var/www/html/index.php</h3>
+            <p class="text-xs text-slate-400">Modify file contents or metadata to test integrity detection</p>
+          </div>
+        </div>
+        <button onclick="closeFileEditorModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4 overflow-y-auto flex-1 custom-scroll">
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">File Permissions & Owner</label>
+          <div class="grid grid-cols-2 gap-3">
+            <input type="text" id="modal-file-perms" class="bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs font-mono text-slate-200">
+            <input type="text" id="modal-file-owner" class="bg-slate-900 border border-slate-800 rounded px-3 py-1.5 text-xs font-mono text-slate-200">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-mono text-slate-400">File Content Buffer</label>
+            <span class="text-[11px] text-slate-500 font-mono">Simulate real-time edits</span>
+          </div>
+          <textarea id="modal-file-content" rows="10" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-cyan-500 custom-scroll"></textarea>
+        </div>
+
+        <div class="bg-slate-900/90 rounded-lg p-3 border border-slate-800 space-y-1.5 text-xs font-mono">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Stored Baseline Hash:</span>
+            <span id="modal-baseline-hash" class="text-slate-300 font-bold truncate max-w-xs">N/A</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">New Hash (Live Recalculation):</span>
+            <span id="modal-live-hash" class="text-cyan-400 font-bold truncate max-w-xs">Calculating...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-cyber-border bg-slate-900/60 flex items-center justify-between">
+        <button onclick="closeFileEditorModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium">Cancel</button>
+        <button onclick="saveFileEdits()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>Save Changes & Compute Hash</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PYTHON ENGINE CODE MODAL -->
+  <div id="python-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-cyber-card border border-cyber-border rounded-xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between p-4 border-b border-cyber-border bg-slate-900/80">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="code" class="w-5 h-5 text-amber-400"></i>
+          <div>
+            <h3 class="text-sm font-bold text-white">Production Python FIM Backend Implementation</h3>
+            <p class="text-xs text-slate-400">Deployable architecture with watchdog, hashlib SHA-256, and SQLite3</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="copyPythonCode()" id="btn-copy-code" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded text-xs border border-slate-700 flex items-center gap-1">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>Copy Code</span>
+          </button>
+          <button onclick="togglePythonCodeModal()" class="text-slate-400 hover:text-white p-1 rounded">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-4 overflow-y-auto flex-1 custom-scroll bg-[#0b0e17]">
+        <div class="mb-3 text-xs text-slate-400">
+          Save this file as <span class="text-amber-400 font-mono">fim_engine.py</span>. Run <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-200">pip install watchdog</code> to execute.
+        </div>
+        <pre><code id="python-code-content" class="text-xs font-mono text-emerald-400 leading-relaxed block overflow-x-auto whitespace-pre"># ==============================================================================
+# AegisGuard FIM - Enterprise File Integrity Monitoring Daemon
+# Engine: Python 3.10+ | SHA-256 Cryptographic Verification | Watchdog Filesystem
+# ==============================================================================
+
+import os
+import sys
+import time
+import hashlib
+import sqlite3
+import datetime
+from pathlib import Path
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+# Database Initialization
+DB_PATH = "fim_baseline.db"
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_database():
+    """Create baseline and audit log tables."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS file_baselines (
+            filepath TEXT PRIMARY KEY,
+            sha256 TEXT NOT NULL,
+            permissions TEXT NOT NULL,
+            file_size INTEGER NOT NULL,
+            last_modified TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS security_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            event_type TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            old_hash TEXT,
+            new_hash TEXT,
+            details TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+    print("[+] FIM Database Initialized.")
+
+def calculate_sha256(filepath: str, block_size: int = 65536) -> str:
+    """Calculate cryptographic SHA-256 hash in blocks to handle large files."""
+    sha256 = hashlib.sha256()
+    try:
+        with open(filepath, "rb") as f:
+            for block in iter(lambda: f.read(block_size), b""):
+                sha256.update(block)
+        return sha256.hexdigest()
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+
+def establish_baseline(directory: str):
+    """Scan directory recursively and register initial SHA-256 baselines."""
+    conn = get_db()
+    cursor = conn.cursor()
+    print(f"[*] Establishing cryptographic baseline for directory: {directory}")
+    
+    count = 0
+    for root, _, files in os.walk(directory):
+        for file in files:
+            full_path = os.path.abspath(os.path.join(root, file))
+            file_hash = calculate_sha256(full_path)
+            stat = os.stat(full_path)
+            perms = oct(stat.st_mode)[-3:]
+            size = stat.st_size
+            mtime = datetime.datetime.fromtimestamp(stat.st_mtime).isoformat()
+
+            cursor.execute("""
+                INSERT OR REPLACE INTO file_baselines 
+                (filepath, sha256, permissions, file_size, last_modified)
+                VALUES (?, ?, ?, ?, ?)
+            """, (full_path, file_hash, perms, size, mtime))
+            count += 1
+            print(f"    [+] Registered {full_path} -> {file_hash[:12]}...")
+
+    conn.commit()
+    conn.close()
+    print(f"[✓] Baseline established for {count} files.\n")
+
+class FIMWatchdogHandler(FileSystemEventHandler):
+    """Real-time File System Watcher responding to create, modify, delete events."""
+
+    def on_modified(self, event):
+        if event.is_directory:
+            return
+        filepath = os.path.abspath(event.src_path)
+        new_hash = calculate_sha256(filepath)
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT sha256, permissions FROM file_baselines WHERE filepath = ?", (filepath,))
+        row = cursor.fetchone()
+
+        if row:
+            old_hash = row["sha256"]
+            if old_hash != new_hash and not new_hash.startswith("ERROR"):
+                self.log_alert("FILE_MODIFIED", "CRITICAL", filepath, old_hash, new_hash,
+                               "File contents altered unauthorizedly.")
+        else:
+            self.log_alert("UNTRACKED_MODIFICATION", "WARNING", filepath, None, new_hash,
+                           "File modified without initial baseline record.")
+        conn.close()
+
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        filepath = os.path.abspath(event.src_path)
+        new_hash = calculate_sha256(filepath)
+        self.log_alert("FILE_CREATED", "HIGH", filepath, None, new_hash,
+                       "New unauthorized file detected in monitored zone.")
+
+    def on_deleted(self, event):
+        if event.is_directory:
+            return
+        filepath = os.path.abspath(event.src_path)
+        self.log_alert("FILE_DELETED", "CRITICAL", filepath, None, None,
+                       "Monitored file was deleted or removed.")
+
+    def log_alert(self, event_type, severity, filepath, old_hash, new_hash, details):
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO security_alerts (event_type, severity, filepath, old_hash, new_hash, details)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (event_type, severity, filepath, old_hash, new_hash, details))
+        conn.commit()
+        conn.close()
+
+        print("\n" + "!" * 60)
+        print(f"🚨 [SECURITY ALERT - {severity}] {event_type}")
+        print(f"File:     {filepath}")
+        print(f"Old Hash: {old_hash}")
+        print(f"New Hash: {new_hash}")
+        print(f"Details:  {details}")
+        print("!" * 60 + "\n")
+
+if __name__ == "__main__":
+    init_database()
+    watch_dir = sys.argv[1] if len(sys.argv) > 1 else "./monitored_folder"
+    os.makedirs(watch_dir, exist_ok=True)
+    
+    establish_baseline(watch_dir)
+
+    observer = Observer()
+    observer.schedule(FIMWatchdogHandler(), path=watch_dir, recursive=True)
+    observer.start()
+    print(f"[*] FIM Watchdog active. Monitoring directory: {os.path.abspath(watch_dir)}")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+        print("\n[-] AegisGuard FIM Daemon terminated.")
+    observer.join()
+</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <script>
+    // State management for virtual file system and FIM baselines
+    let virtualFS = [
+      {
+        id: "file-1",
+        path: "/var/www/html/index.php",
+        description: "Main Web Application Entrypoint",
+        permissions: "-rw-r--r-- (644)",
+        baselinePermissions: "-rw-r--r-- (644)",
+        owner: "www-data:www-data",
+        baselineOwner: "www-data:www-data",
+        content: `<?php\n  // Production Portal v2.4\n  session_start();\n  require_once('auth.php');\n  echo "Welcome to Secure Internal Portal";\n?>`,
+        baselineContent: `<?php\n  // Production Portal v2.4\n  session_start();\n  require_once('auth.php');\n  echo "Welcome to Secure Internal Portal";\n?>`,
+        baselineHash: "",
+        currentHash: "",
+        status: "HEALTHY", // HEALTHY, MODIFIED, DELETED, PERM_CHANGED, NEW
+        lastChecked: new Date().toLocaleTimeString(),
+        baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+      },
+      {
+        id: "file-2",
+        path: "/etc/passwd",
+        description: "Local User Accounts & Shells",
+        permissions: "-rw-r--r-- (644)",
+        baselinePermissions: "-rw-r--r-- (644)",
+        owner: "root:root",
+        baselineOwner: "root:root",
+        content: "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nadmin:x:1000:1000:Admin:/home/admin:/bin/bash",
+        baselineContent: "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nadmin:x:1000:1000:Admin:/home/admin:/bin/bash",
+        baselineHash: "",
+        currentHash: "",
+        status: "HEALTHY",
+        lastChecked: new Date().toLocaleTimeString(),
+        baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+      },
+      {
+        id: "file-3",
+        path: "/etc/nginx/nginx.conf",
+        description: "Reverse Proxy & TLS Web Server Config",
+        permissions: "-rw-r--r-- (644)",
+        baselinePermissions: "-rw-r--r-- (644)",
+        owner: "root:root",
+        baselineOwner: "root:root",
+        content: "events { worker_connections 1024; }\nhttp {\n    server {\n        listen 443 ssl;\n        ssl_protocols TLSv1.2 TLSv1.3;\n        server_name portal.internal;\n    }\n}",
+        baselineContent: "events { worker_connections 1024; }\nhttp {\n    server {\n        listen 443 ssl;\n        ssl_protocols TLSv1.2 TLSv1.3;\n        server_name portal.internal;\n    }\n}",
+        baselineHash: "",
+        currentHash: "",
+        status: "HEALTHY",
+        lastChecked: new Date().toLocaleTimeString(),
+        baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+      },
+      {
+        id: "file-4",
+        path: "/bin/login",
+        description: "System Authentication Binary Executable",
+        permissions: "-rwsr-xr-x (4755)",
+        baselinePermissions: "-rwsr-xr-x (4755)",
+        owner: "root:root",
+        baselineOwner: "root:root",
+        content: "\x7fELF\x02\x01\x01\x00_LOGIN_BINARY_SECURE_AUTH_CHECKSUM_TOKEN_999812",
+        baselineContent: "\x7fELF\x02\x01\x01\x00_LOGIN_BINARY_SECURE_AUTH_CHECKSUM_TOKEN_999812",
+        baselineHash: "",
+        currentHash: "",
+        status: "HEALTHY",
+        lastChecked: new Date().toLocaleTimeString(),
+        baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+      },
+      {
+        id: "file-5",
+        path: "/etc/ssh/sshd_config",
+        description: "OpenSSH Daemon Hardening Config",
+        permissions: "-rw------- (600)",
+        baselinePermissions: "-rw------- (600)",
+        owner: "root:root",
+        baselineOwner: "root:root",
+        content: "PermitRootLogin no\nPasswordAuthentication no\nPubkeyAuthentication yes\nX11Forwarding no",
+        baselineContent: "PermitRootLogin no\nPasswordAuthentication no\nPubkeyAuthentication yes\nX11Forwarding no",
+        baselineHash: "",
+        currentHash: "",
+        status: "HEALTHY",
+        lastChecked: new Date().toLocaleTimeString(),
+        baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+      }
+    ];
+
+    let auditLogs = [];
+    let alerts = [];
+    let activeEditingFileId = null;
+    let currentInspectorFileId = "file-1";
+
+    async function sha256(str) {
+      const utf8 = new TextEncoder().encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    }
+
+    async function computeFileBufferHash(arrayBuffer) {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Initialize baseline hashes
+    async function initializeSystem() {
+      for (let f of virtualFS) {
+        const hash = await sha256(f.content + f.permissions);
+        f.baselineHash = hash;
+        f.currentHash = hash;
+        f.baselineContent = f.content;
+        f.baselinePermissions = f.permissions;
+        f.baselineOwner = f.owner;
+      }
+      
+      logAudit("INFO", "SYSTEM_INIT", "CORE", "FIM Agent initialized with SHA-256 engine. Baseline established.");
+      updateDashboardUI();
+      populateInspectorDropdown();
+      renderFileInspectorDetails(currentInspectorFileId);
+    }
+
+    async function captureBaselineModal() {
+      for (let f of virtualFS) {
+        if (f.status !== "DELETED") {
+          const hash = await sha256(f.content + f.permissions);
+          f.baselineHash = hash;
+          f.currentHash = hash;
+          f.baselineContent = f.content;
+          f.baselinePermissions = f.permissions;
+          f.baselineOwner = f.owner;
+          f.baselineTime = new Date().toLocaleTimeString();
+          f.status = "HEALTHY";
+        }
+      }
+      alerts = [];
+      logAudit("INFO", "BASELINE_RESET", "ALL_MONITORED", "Security officer captured trusted SHA-256 baseline across all files.");
+      showToast("Baseline Established", "All cryptographic checksums committed to database.", "success");
+      updateDashboardUI();
+      renderFileInspectorDetails(currentInspectorFileId);
+    }
+
+    async function runIntegrityScan() {
+      let detectedViolations = 0;
+      const nowStr = new Date().toLocaleTimeString();
+
+      for (let f of virtualFS) {
+        f.lastChecked = nowStr;
+
+        if (f.status === "DELETED") {
+          detectedViolations++;
+          createAlert("FILE_DELETED", "CRITICAL", f.path, f.baselineHash, "N/A", "Monitored asset has been deleted from disk.");
+          continue;
+        }
+
+        const freshHash = await sha256(f.content + f.permissions);
+        f.currentHash = freshHash;
+
+        if (f.isNew && !f.baselineHash) {
+          f.status = "NEW";
+          detectedViolations++;
+          createAlert("FILE_CREATED", "HIGH", f.path, "NONE", freshHash, "Rogue/untracked file detected inside monitored directory.");
+        } else if (f.currentHash !== f.baselineHash) {
+          f.status = "MODIFIED";
+          detectedViolations++;
+          createAlert("FILE_MODIFIED", "CRITICAL", f.path, f.baselineHash, f.currentHash, "SHA-256 hash mismatch! File contents or permissions tampered.");
+        } else {
+          f.status = "HEALTHY";
+        }
+      }
+
+      document.getElementById('stat-last-scan').textContent = `Last scan: ${nowStr}`;
+
+      if (detectedViolations > 0) {
+        showToast("Integrity Violation Detected!", `${detectedViolations} anomaly event(s) found during SHA-256 comparison.`, "alert");
+      } else {
+        showToast("Scan Complete", "100% Integrity match. Zero unauthorized alterations.", "success");
+      }
+
+      updateDashboardUI();
+      renderFileInspectorDetails(currentInspectorFileId);
+    }
+
+    function createAlert(type, severity, path, oldH, newH, details) {
+      const exists = alerts.find(a => a.path === path && a.type === type);
+      if (exists) return;
+
+      const alertItem = {
+        id: "alert-" + Date.now() + Math.random().toString(36).substr(2, 4),
+        timestamp: new Date().toLocaleTimeString(),
+        type: type,
+        severity: severity,
+        path: path,
+        oldHash: oldH,
+        newHash: newH,
+        details: details
+      };
+
+      alerts.unshift(alertItem);
+      logAudit(severity, type, path, details);
+    }
+
+    function logAudit(severity, type, path, details) {
+      auditLogs.unshift({
+        timestamp: new Date().toLocaleTimeString(),
+        severity: severity,
+        type: type,
+        path: path,
+        details: details
+      });
+      if (auditLogs.length > 50) auditLogs.pop();
+    }
+
+    function clearAlerts() {
+      alerts = [];
+      showToast("Alerts Acknowledged", "Incident queue cleared by security administrator.", "info");
+      updateDashboardUI();
+      renderFileInspectorDetails(currentInspectorFileId);
+    }
+
+    // Attacks simulation
+    async function simulateAttack(type) {
+      if (type === 'webshell') {
+        const phpFile = virtualFS.find(f => f.path === '/var/www/html/index.php');
+        if (phpFile) {
+          phpFile.content += "\n\n// MALICIOUS BACKDOOR INJECTED BY ATTACKER\nif(isset($_GET['cmd'])){ system($_GET['cmd']); die(); }";
+          phpFile.currentHash = await sha256(phpFile.content + phpFile.permissions);
+          phpFile.status = "MODIFIED";
+          createAlert("FILE_MODIFIED", "CRITICAL", phpFile.path, phpFile.baselineHash, phpFile.currentHash, "Unauthorized PHP Web Shell backdoor injected!");
+          showToast("Attack Simulated", "Injected backdoor payload into /var/www/html/index.php", "alert");
+          currentInspectorFileId = phpFile.id;
+        }
+      } else if (type === 'passwd') {
+        const passwdFile = virtualFS.find(f => f.path === '/etc/passwd');
+        if (passwdFile) {
+          passwdFile.content += "\nbackdoor_root:x:0:0:Rogue Admin:/root:/bin/bash";
+          passwdFile.currentHash = await sha256(passwdFile.content + passwdFile.permissions);
+          passwdFile.status = "MODIFIED";
+          createAlert("FILE_MODIFIED", "CRITICAL", passwdFile.path, passwdFile.baselineHash, passwdFile.currentHash, "Rogue root-level user appended to /etc/passwd!");
+          showToast("Attack Simulated", "Added unauthorized UID:0 user to /etc/passwd", "alert");
+          currentInspectorFileId = passwdFile.id;
+        }
+      } else if (type === 'delete') {
+        const target = virtualFS.find(f => f.path === '/etc/ssh/sshd_config');
+        if (target) {
+          target.status = "DELETED";
+          createAlert("FILE_DELETED", "CRITICAL", target.path, target.baselineHash, "DELETED", "Crucial SSH daemon configuration file was deleted!");
+          showToast("Attack Simulated", "Deleted critical asset /etc/ssh/sshd_config", "alert");
+          currentInspectorFileId = target.id;
+        }
+      } else if (type === 'perms') {
+        const loginFile = virtualFS.find(f => f.path === '/etc/nginx/nginx.conf');
+        if (loginFile) {
+          loginFile.permissions = "-rwxrwxrwx (777)";
+          loginFile.currentHash = await sha256(loginFile.content + loginFile.permissions);
+          loginFile.status = "MODIFIED";
+          createAlert("PERM_CHANGED", "HIGH", loginFile.path, loginFile.baselineHash, loginFile.currentHash, "Permission elevated to world-writable (777). Potential security breach!");
+          showToast("Exploit Simulated", "Elevated permissions on nginx.conf to 777", "alert");
+          currentInspectorFileId = loginFile.id;
+        }
+      }
+      updateDashboardUI();
+      renderFileInspectorDetails(currentInspectorFileId);
+      document.getElementById('inspector-file-select').value = currentInspectorFileId;
+    }
+
+    async function resetFileSystem() {
+      virtualFS = [
+        {
+          id: "file-1",
+          path: "/var/www/html/index.php",
+          description: "Main Web Application Entrypoint",
+          permissions: "-rw-r--r-- (644)",
+          baselinePermissions: "-rw-r--r-- (644)",
+          owner: "www-data:www-data",
+          baselineOwner: "www-data:www-data",
+          content: `<?php\n  // Production Portal v2.4\n  session_start();\n  require_once('auth.php');\n  echo "Welcome to Secure Internal Portal";\n?>`,
+          baselineContent: `<?php\n  // Production Portal v2.4\n  session_start();\n  require_once('auth.php');\n  echo "Welcome to Secure Internal Portal";\n?>`,
+          baselineHash: "",
+          currentHash: "",
+          status: "HEALTHY",
+          lastChecked: new Date().toLocaleTimeString(),
+          baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+        },
+        {
+          id: "file-2",
+          path: "/etc/passwd",
+          description: "Local User Accounts & Shells",
+          permissions: "-rw-r--r-- (644)",
+          baselinePermissions: "-rw-r--r-- (644)",
+          owner: "root:root",
+          baselineOwner: "root:root",
+          content: "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nadmin:x:1000:1000:Admin:/home/admin:/bin/bash",
+          baselineContent: "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nadmin:x:1000:1000:Admin:/home/admin:/bin/bash",
+          baselineHash: "",
+          currentHash: "",
+          status: "HEALTHY",
+          lastChecked: new Date().toLocaleTimeString(),
+          baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+        },
+        {
+          id: "file-3",
+          path: "/etc/nginx/nginx.conf",
+          description: "Reverse Proxy & TLS Web Server Config",
+          permissions: "-rw-r--r-- (644)",
+          baselinePermissions: "-rw-r--r-- (644)",
+          owner: "root:root",
+          baselineOwner: "root:root",
+          content: "events { worker_connections 1024; }\nhttp {\n    server {\n        listen 443 ssl;\n        ssl_protocols TLSv1.2 TLSv1.3;\n        server_name portal.internal;\n    }\n}",
+          baselineContent: "events { worker_connections 1024; }\nhttp {\n    server {\n        listen 443 ssl;\n        ssl_protocols TLSv1.2 TLSv1.3;\n        server_name portal.internal;\n    }\n}",
+          baselineHash: "",
+          currentHash: "",
+          status: "HEALTHY",
+          lastChecked: new Date().toLocaleTimeString(),
+          baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+        },
+        {
+          id: "file-4",
+          path: "/bin/login",
+          description: "System Authentication Binary Executable",
+          permissions: "-rwsr-xr-x (4755)",
+          baselinePermissions: "-rwsr-xr-x (4755)",
+          owner: "root:root",
+          baselineOwner: "root:root",
+          content: "\x7fELF\x02\x01\x01\x00_LOGIN_BINARY_SECURE_AUTH_CHECKSUM_TOKEN_999812",
+          baselineContent: "\x7fELF\x02\x01\x01\x00_LOGIN_BINARY_SECURE_AUTH_CHECKSUM_TOKEN_999812",
+          baselineHash: "",
+          currentHash: "",
+          status: "HEALTHY",
+          lastChecked: new Date().toLocaleTimeString(),
+          baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+        },
+        {
+          id: "file-5",
+          path: "/etc/ssh/sshd_config",
+          description: "OpenSSH Daemon Hardening Config",
+          permissions: "-rw------- (600)",
+          baselinePermissions: "-rw------- (600)",
+          owner: "root:root",
+          baselineOwner: "root:root",
+          content: "PermitRootLogin no\nPasswordAuthentication no\nPubkeyAuthentication yes\nX11Forwarding no",
+          baselineContent: "PermitRootLogin no\nPasswordAuthentication no\nPubkeyAuthentication yes\nX11Forwarding no",
+          baselineHash: "",
+          currentHash: "",
+          status: "HEALTHY",
+          lastChecked: new Date().toLocaleTimeString(),
+          baselineTime: new Date(Date.now() - 3600000).toLocaleTimeString()
+        }
+      ];
+
+      alerts = [];
+      await initializeSystem();
+      showToast("Reset Completed", "File system restored to pristine initial state.", "info");
+    }
+
+    function updateDashboardUI() {
+      const nonDeleted = virtualFS.filter(f => f.status !== 'DELETED').length;
+      document.getElementById('stat-monitored-count').textContent = nonDeleted;
+      document.getElementById('badge-file-count').textContent = virtualFS.length;
+      document.getElementById('badge-alert-count').textContent = alerts.length;
+      document.getElementById('stat-alerts-count').textContent = alerts.length;
+
+      const alertIconBox = document.getElementById('stat-alerts-icon-box');
+      const alertsDesc = document.getElementById('stat-alerts-desc');
+
+      if (alerts.length > 0) {
+        alertIconBox.className = "p-3 bg-rose-500/10 rounded-lg border border-rose-500/30 text-rose-400 glow-alert";
+        alertsDesc.innerHTML = `<i data-lucide="alert-triangle" class="w-3 h-3 text-rose-400"></i> ${alerts.length} integrity compromise(s)`;
+        alertsDesc.className = "text-xs text-rose-400 mt-1 flex items-center gap-1";
+      } else {
+        alertIconBox.className = "p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400";
+        alertsDesc.innerHTML = `<i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-400"></i> All hashes match baseline`;
+        alertsDesc.className = "text-xs text-emerald-400 mt-1 flex items-center gap-1";
+      }
+
+      const compromised = virtualFS.filter(f => f.status !== 'HEALTHY').length;
+      const score = Math.max(0, Math.round(((virtualFS.length - compromised) / virtualFS.length) * 100));
+      const scoreElem = document.getElementById('stat-health-score');
+      scoreElem.textContent = score + "%";
+      if (score < 80) scoreElem.className = "text-2xl font-bold text-rose-400 mt-1";
+      else if (score < 100) scoreElem.className = "text-2xl font-bold text-amber-400 mt-1";
+      else scoreElem.className = "text-2xl font-bold text-emerald-400 mt-1";
+
+      renderFilesTable();
+      renderAlertsList();
+      renderAuditLogs();
+      lucide.createIcons();
+    }
+
+    function renderFilesTable() {
+      const tbody = document.getElementById('file-table-body');
+      tbody.innerHTML = "";
+
+      const query = (document.getElementById('file-search-input')?.value || "").toLowerCase();
+
+      const filtered = virtualFS.filter(f => 
+        f.path.toLowerCase().includes(query) ||
+        f.currentHash.toLowerCase().includes(query) ||
+        f.status.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">No matching files found.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-900/60 transition group font-mono text-xs";
+
+        let statusBadge = "";
+        let criteriaPill = "";
+
+        if (f.status === "HEALTHY") {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">INTACT</span>`;
+          criteriaPill = `<span class="text-emerald-400 inline-flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> 7/7 Pass</span>`;
+        } else if (f.status === "MODIFIED") {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">TAMPERED</span>`;
+          criteriaPill = `<span class="text-rose-400 font-bold inline-flex items-center gap-1"><i data-lucide="alert-octagon" class="w-3.5 h-3.5"></i> Hash Mismatch</span>`;
+        } else if (f.status === "DELETED") {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">DELETED</span>`;
+          criteriaPill = `<span class="text-red-400 font-bold inline-flex items-center gap-1"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Missing on Disk</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">UNTRACKED</span>`;
+          criteriaPill = `<span class="text-amber-400 inline-flex items-center gap-1"><i data-lucide="help-circle" class="w-3.5 h-3.5"></i> No Baseline</span>`;
+        }
+
+        const hashShort = f.status === "DELETED" ? "N/A" : `${f.currentHash.substring(0, 10)}...${f.currentHash.substring(f.currentHash.length - 8)}`;
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-medium text-slate-200">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="${f.path.includes('.php') ? 'code' : f.path.includes('conf') ? 'settings' : 'file'}" class="w-4 h-4 text-cyan-400"></i>
+              <div>
+                <button onclick="inspectFileById('${f.id}')" class="font-sans font-semibold text-slate-100 hover:text-cyan-400 transition text-left">
+                  ${escapeHTML(f.path)}
+                </button>
+                <div class="text-[10px] text-slate-500 font-sans">${escapeHTML(f.description || 'Monitored Asset')}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-slate-400">
+            <div>${escapeHTML(f.permissions)}</div>
+            <div class="text-[10px] text-slate-500">${escapeHTML(f.owner)}</div>
+          </td>
+          <td class="py-3 px-4">
+            <button onclick="copyToClipboard('${f.currentHash}')" title="Click to copy full SHA-256" class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-300 font-mono text-[11px] transition inline-flex items-center gap-1">
+              <span>${hashShort}</span>
+              <i data-lucide="copy" class="w-3 h-3 text-slate-500 hover:text-cyan-400"></i>
+            </button>
+          </td>
+          <td class="py-3 px-4">${criteriaPill}</td>
+          <td class="py-3 px-4">${statusBadge}</td>
+          <td class="py-3 px-4 text-right">
+            <div class="flex items-center justify-end space-x-1.5">
+              <!-- SPECIFIC FILE CRITERIA INSPECT BUTTON -->
+              <button onclick="inspectFileById('${f.id}')" class="px-2.5 py-1 rounded bg-cyan-600/15 hover:bg-cyan-600/25 border border-cyan-500/30 text-cyan-300 transition flex items-center gap-1 text-[11px]" title="Inspect All Criteria & Details">
+                <i data-lucide="scan-search" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span class="hidden sm:inline">Inspect</span>
+              </button>
+              <button onclick="openFileEditor('${f.id}')" class="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 transition" title="Inspect / Modify Content Buffer">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteVirtualFile('${f.id}')" class="p-1.5 rounded bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-400 transition" title="Simulate File Deletion">
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // =========================================================================
+    // SPECIFIC FILE CRITERIA & FORENSIC INSPECTOR LOGIC (CORE USER REQUIREMENT)
+    // =========================================================================
+
+    function populateInspectorDropdown() {
+      const select = document.getElementById('inspector-file-select');
+      if (!select) return;
+      select.innerHTML = "";
+
+      virtualFS.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = `${f.path} [${f.status}]`;
+        select.appendChild(opt);
+      });
+      select.value = currentInspectorFileId;
+    }
+
+    function onInspectorSelectFile(fileId) {
+      currentInspectorFileId = fileId;
+      renderFileInspectorDetails(fileId);
+    }
+
+    function inspectFileById(fileId) {
+      currentInspectorFileId = fileId;
+      switchTab('inspector');
+      document.getElementById('inspector-file-select').value = fileId;
+      renderFileInspectorDetails(fileId);
+    }
+
+    function recheckCurrentInspectorFile() {
+      const file = virtualFS.find(f => f.id === currentInspectorFileId);
+      if (!file) return;
+
+      sha256(file.content + file.permissions).then(freshHash => {
+        file.currentHash = freshHash;
+        if (file.status !== "DELETED") {
+          if (file.currentHash !== file.baselineHash) {
+            file.status = "MODIFIED";
+          } else {
+            file.status = "HEALTHY";
+          }
+        }
+        file.lastChecked = new Date().toLocaleTimeString();
+        renderFileInspectorDetails(file.id);
+        updateDashboardUI();
+        showToast("Criteria Re-evaluated", `Updated criteria analysis for ${file.path}`, "info");
+      });
+    }
+
+    function renderFileInspectorDetails(fileId) {
+      const file = virtualFS.find(f => f.id === fileId);
+      const container = document.getElementById('inspector-details-view');
+      if (!file || !container) return;
+
+      // Calculate criteria evaluations
+      const isDeleted = file.status === "DELETED";
+      const hashMatch = !isDeleted && file.baselineHash === file.currentHash && file.baselineHash !== "";
+      const permsMatch = file.permissions === file.baselinePermissions;
+      const ownerMatch = file.owner === file.baselineOwner;
+      const isWorldWritable = file.permissions.includes("777");
+      
+      const baselineSize = new TextEncoder().encode(file.baselineContent || "").length;
+      const currentSize = isDeleted ? 0 : new TextEncoder().encode(file.content || "").length;
+      const sizeDelta = currentSize - baselineSize;
+
+      // Heuristic threat detection check in content
+      const threatKeywords = ["system(", "exec(", "passthru(", "eval(", "$_GET['cmd']", "0:0:root", "backdoor"];
+      const detectedThreats = threatKeywords.filter(k => (file.content || "").includes(k));
+
+      // Build criteria checklist items
+      const criteriaList = [
+        {
+          name: "Cryptographic SHA-256 Checksum",
+          desc: "Current SHA-256 hash must perfectly match trusted cryptographic baseline.",
+          passed: hashMatch,
+          current: isDeleted ? "N/A (File Deleted)" : (file.currentHash ? `${file.currentHash.substring(0, 16)}...` : "None"),
+          baseline: file.baselineHash ? `${file.baselineHash.substring(0, 16)}...` : "None",
+          statusLabel: hashMatch ? "IDENTICAL" : (isDeleted ? "FILE_MISSING" : "HASH_MISMATCH")
+        },
+        {
+          name: "POSIX File Permissions & Octal Mode",
+          desc: "Audit octal permission bits against baseline. World-writable (777) is forbidden.",
+          passed: permsMatch && !isWorldWritable,
+          current: file.permissions,
+          baseline: file.baselinePermissions,
+          statusLabel: isWorldWritable ? "VULNERABILITY: 777" : (permsMatch ? "INTACT" : "PERMISSIONS_ALTERED")
+        },
+        {
+          name: "User & Group Ownership (UID/GID)",
+          desc: "Asset ownership must remain assigned to authorized system service account.",
+          passed: ownerMatch,
+          current: file.owner,
+          baseline: file.baselineOwner,
+          statusLabel: ownerMatch ? "CORRECT" : "OWNERSHIP_HIJACKED"
+        },
+        {
+          name: "Byte Size & Content Length Invariance",
+          desc: "Monitored asset size must match baseline buffer allocation within allowed delta.",
+          passed: sizeDelta === 0 && !isDeleted,
+          current: `${currentSize} Bytes`,
+          baseline: `${baselineSize} Bytes`,
+          statusLabel: sizeDelta === 0 ? "EXACT MATCH" : `${sizeDelta > 0 ? '+' : ''}${sizeDelta} Bytes Delta`
+        },
+        {
+          name: "Disk Persistence & Inode State",
+          desc: "Monitored asset must exist on storage filesystem without inode or path deletion.",
+          passed: !isDeleted,
+          current: isDeleted ? "DELETED / UNLINKED" : "PRESENT ON FILESYSTEM",
+          baseline: "PRESENT ON FILESYSTEM",
+          statusLabel: isDeleted ? "CRITICAL: DELETED" : "EXISTING"
+        },
+        {
+          name: "Heuristic Attack Signature Scan",
+          desc: "Inspection for backdoors, unauthorized web shell calls, or rogue UID:0 accounts.",
+          passed: detectedThreats.length === 0,
+          current: detectedThreats.length > 0 ? `Triggered: ${detectedThreats.join(", ")}` : "Clean (No Malicious Strings)",
+          baseline: "Clean (No Signatures)",
+          statusLabel: detectedThreats.length > 0 ? "THREAT DETECTED" : "CLEAN"
+        },
+        {
+          name: "Timestamp & Access Sequence",
+          desc: "Verifies when file was last checked and when baseline was established.",
+          passed: true,
+          current: `Checked: ${file.lastChecked}`,
+          baseline: `Baselined: ${file.baselineTime}`,
+          statusLabel: "VERIFIED"
+        }
+      ];
+
+      const passCount = criteriaList.filter(c => c.passed).length;
+      const totalCount = criteriaList.length;
+
+      // Generate Line Diff between baseline and current
+      const diffHTML = generateLineDiff(file.baselineContent || "", isDeleted ? "" : (file.content || ""));
+
+      container.innerHTML = `
+        <!-- File Header Summary Card -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-lg">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 text-xs font-mono font-bold bg-slate-800 text-cyan-400 border border-slate-700 rounded">
+                  ${escapeHTML(file.path.split('.').pop().toUpperCase() || 'FILE')}
+                </span>
+                <h2 class="text-lg font-bold text-white font-mono">${escapeHTML(file.path)}</h2>
+                <span class="px-2 py-0.5 rounded text-xs font-bold ${
+                  file.status === 'HEALTHY' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                  file.status === 'MODIFIED' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                  'bg-red-500/20 text-red-400 border border-red-500/30'
+                }">
+                  ${file.status}
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 font-sans">${escapeHTML(file.description || 'Monitored File')}</p>
+            </div>
+
+            <!-- Quick Specific File Actions -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="openFileEditor('${file.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Edit Buffer</span>
+              </button>
+              <button onclick="remediateFile('${escapeHTML(file.path)}')" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Approve as New Baseline</span>
+              </button>
+              <button onclick="restoreCleanState('${file.id}')" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span>Revert to Baseline</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Overall Criteria Score Banner -->
+          <div class="mt-4 pt-4 border-t border-cyber-border grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <span class="text-slate-500 block text-[10px]">CRITERIA PASS RATE</span>
+              <span class="text-base font-bold ${passCount === totalCount ? 'text-emerald-400' : 'text-rose-400'}">${passCount} / ${totalCount} Checks</span>
+            </div>
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <span class="text-slate-500 block text-[10px]">FILE BUFFER SIZE</span>
+              <span class="text-base font-bold text-slate-200">${currentSize} B <span class="text-xs ${sizeDelta > 0 ? 'text-rose-400' : 'text-slate-500'}">(${sizeDelta >= 0 ? '+' : ''}${sizeDelta} B)</span></span>
+            </div>
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <span class="text-slate-500 block text-[10px]">PERMISSIONS / OWNER</span>
+              <span class="text-xs font-bold ${isWorldWritable ? 'text-rose-400' : 'text-slate-200'}">${escapeHTML(file.permissions.split(' ')[0])} (${escapeHTML(file.owner)})</span>
+            </div>
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <span class="text-slate-500 block text-[10px]">ALGORITHM / DIGEST</span>
+              <span class="text-xs font-bold text-cyan-400">SHA-256 (256-bit)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7-POINT INTEGRITY CRITERIA AUDIT CHECKLIST -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-lg space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="list-checks" class="w-4 h-4 text-cyan-400"></i>
+                Formal File Integrity Criteria Matrix
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Individual pass/fail criteria evaluated dynamically against cryptographic baseline.</p>
+            </div>
+            <span class="px-2.5 py-1 text-xs font-mono font-bold rounded ${passCount === totalCount ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}">
+              Score: ${Math.round((passCount/totalCount)*100)}%
+            </span>
+          </div>
+
+          <div class="divide-y divide-cyber-border/70 border border-cyber-border rounded-lg overflow-hidden bg-slate-950/50">
+            ${criteriaList.map((c, idx) => `
+              <div class="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900/40 transition">
+                <div class="flex items-start space-x-3">
+                  <div class="mt-0.5 shrink-0">
+                    ${c.passed ? 
+                      `<span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center"><i data-lucide="check" class="w-3.5 h-3.5"></i></span>` :
+                      `<span class="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center"><i data-lucide="x" class="w-3.5 h-3.5"></i></span>`
+                    }
+                  </div>
+                  <div>
+                    <div class="flex items-center space-x-2">
+                      <span class="text-xs font-bold text-white font-mono">${idx + 1}. ${escapeHTML(c.name)}</span>
+                      <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold ${c.passed ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                        ${escapeHTML(c.statusLabel)}
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(c.desc)}</p>
+                  </div>
+                </div>
+
+                <div class="text-left sm:text-right font-mono text-[11px] bg-slate-900/60 sm:bg-transparent p-2 sm:p-0 rounded border sm:border-0 border-slate-800">
+                  <div class="text-slate-400">Current: <span class="${c.passed ? 'text-slate-200' : 'text-rose-400 font-bold'}">${escapeHTML(c.current)}</span></div>
+                  <div class="text-slate-500 text-[10px]">Baseline: ${escapeHTML(c.baseline)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- CRYPTOGRAPHIC SHA-256 COMPARISON CARD -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-lg space-y-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="fingerprint" class="w-4 h-4 text-cyan-400"></i>
+            Cryptographic SHA-256 Checksum Side-by-Side Comparison
+          </h3>
+          <p class="text-xs text-slate-400">Detailed cryptographic hash comparison used to prove file immutability.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 font-mono text-xs">
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+              <div class="flex items-center justify-between text-slate-400 text-[11px]">
+                <span class="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Trusted Baseline Hash
+                </span>
+                <span class="text-slate-500">${escapeHTML(file.baselineTime)}</span>
+              </div>
+              <div class="p-2 bg-slate-900/90 rounded border border-slate-800/80 text-emerald-400 break-all select-all font-mono text-[11px]">
+                ${escapeHTML(file.baselineHash || 'No baseline computed')}
+              </div>
+              <div class="text-[10px] text-slate-500">Stored in immutable FIM database SQLite record.</div>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+              <div class="flex items-center justify-between text-slate-400 text-[11px]">
+                <span class="flex items-center gap-1.5 ${hashMatch ? 'text-emerald-400' : 'text-rose-400'} font-bold">
+                  <i data-lucide="${hashMatch ? 'check-circle' : 'alert-triangle'}" class="w-3.5 h-3.5"></i> Current Calculated Hash
+                </span>
+                <span class="text-slate-500">${escapeHTML(file.lastChecked)}</span>
+              </div>
+              <div class="p-2 bg-slate-900/90 rounded border border-slate-800/80 ${hashMatch ? 'text-slate-200' : 'text-rose-400 font-bold'} break-all select-all font-mono text-[11px]">
+                ${isDeleted ? 'FILE DELETED / NO HASH' : escapeHTML(file.currentHash)}
+              </div>
+              <div class="text-[10px] ${hashMatch ? 'text-emerald-400' : 'text-rose-400'} font-semibold">
+                ${hashMatch ? '✓ Matches trusted baseline cryptographically' : '✗ Checksum divergence! Possible unauthorized tampering.'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VISUAL CONTENT FORENSIC DIFF VIEWER -->
+        <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 shadow-lg space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="git-commit" class="w-4 h-4 text-cyan-400"></i>
+                Line-by-Line Forensic Content Diff
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Green lines indicate additions or injected code; red lines indicate deletions.</p>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">Unified Diff Format</span>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden font-mono text-xs">
+            <div class="bg-slate-900/80 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+              <span>--- a${escapeHTML(file.path)} (Baseline)</span>
+              <span>+++ b${escapeHTML(file.path)} (Current Disk Content)</span>
+            </div>
+            <div class="p-3 max-h-72 overflow-y-auto custom-scroll space-y-0.5 text-[11px]">
+              ${diffHTML}
+            </div>
+          </div>
+        </div>
+      `;
+
+      lucide.createIcons();
+    }
+
+    // Helper: Generate line-by-line diff between baseline content and current content
+    function generateLineDiff(baseStr, currStr) {
+      if (!currStr && !baseStr) {
+        return `<div class="text-slate-500 py-3 text-center">Empty file buffer.</div>`;
+      }
+      if (!currStr) {
+        return `<div class="diff-line-removed px-2 py-1">[FILE DELETED FROM DISK] All lines removed.</div>`;
+      }
+
+      const baseLines = baseStr.split('\n');
+      const currLines = currStr.split('\n');
+
+      let html = '';
+      const maxLen = Math.max(baseLines.length, currLines.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const b = baseLines[i];
+        const c = currLines[i];
+
+        if (b === undefined && c !== undefined) {
+          // Added line
+          html += `<div class="diff-line-added px-2 py-0.5 select-all">+ ${escapeHTML(c)}</div>`;
+        } else if (b !== undefined && c === undefined) {
+          // Removed line
+          html += `<div class="diff-line-removed px-2 py-0.5 select-all">- ${escapeHTML(b)}</div>`;
+        } else if (b === c) {
+          // Unchanged line
+          html += `<div class="diff-line-same px-2 py-0.5">  ${escapeHTML(c)}</div>`;
+        } else {
+          // Changed line
+          html += `<div class="diff-line-removed px-2 py-0.5 select-all">- ${escapeHTML(b)}</div>`;
+          html += `<div class="diff-line-added px-2 py-0.5 select-all">+ ${escapeHTML(c)}</div>`;
+        }
+      }
+
+      return html;
+    }
+
+    async function restoreCleanState(fileId) {
+      const file = virtualFS.find(f => f.id === fileId);
+      if (!file) return;
+
+      file.content = file.baselineContent;
+      file.permissions = file.baselinePermissions;
+      file.owner = file.baselineOwner;
+      file.status = "HEALTHY";
+      file.currentHash = file.baselineHash;
+      file.lastChecked = new Date().toLocaleTimeString();
+
+      alerts = alerts.filter(a => a.path !== file.path);
+      logAudit("INFO", "REVERT_BASELINE", file.path, "Restored file buffer and permissions to clean baseline state.");
+      showToast("Restored Clean Baseline", `Reverted ${file.path} to pristine configuration.`, "success");
+
+      updateDashboardUI();
+      renderFileInspectorDetails(fileId);
+    }
+
+    // =========================================================================
+    // END SPECIFIC FILE CRITERIA LOGIC
+    // =========================================================================
+
+    function renderAlertsList() {
+      const container = document.getElementById('alert-list-container');
+      container.innerHTML = "";
+
+      if (alerts.length === 0) {
+        container.innerHTML = `
+          <div class="bg-cyber-card border border-cyber-border rounded-xl p-8 text-center">
+            <div class="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">Zero Integrity Alerts</h4>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              All monitored files match their cryptographic SHA-256 baselines. Use the Tamper Simulation buttons above to test detection.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      alerts.forEach(a => {
+        const item = document.createElement('div');
+        item.className = "bg-cyber-card border border-rose-500/30 rounded-xl p-4 space-y-3 relative overflow-hidden shadow-lg";
+
+        item.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-2.5">
+              <span class="p-2 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              </span>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 rounded border border-rose-500/30 uppercase">${escapeHTML(a.severity)}</span>
+                  <span class="text-sm font-bold text-white font-mono">${escapeHTML(a.type)}</span>
+                </div>
+                <p class="text-xs text-slate-300 font-mono mt-0.5">${escapeHTML(a.path)}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-[11px] text-slate-400 font-mono">${escapeHTML(a.timestamp)}</span>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-xs font-mono space-y-1.5">
+            <div class="text-slate-300 font-sans">${escapeHTML(a.details)}</div>
+            ${a.oldHash ? `
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-1 pt-1 border-t border-slate-800/80">
+                <span class="text-slate-400">Baseline Hash:</span>
+                <span class="text-emerald-400 select-all truncate max-w-sm">${escapeHTML(a.oldHash)}</span>
+              </div>
+            ` : ''}
+            ${a.newHash ? `
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-1">
+                <span class="text-slate-400">Detected Hash:</span>
+                <span class="text-rose-400 select-all truncate max-w-sm">${escapeHTML(a.newHash)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="flex items-center justify-end space-x-2 pt-1">
+            <button onclick="inspectFileByPath('${escapeHTML(a.path)}')" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs border border-slate-700 transition flex items-center gap-1">
+              <i data-lucide="scan-search" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Inspect File Criteria</span>
+            </button>
+            <button onclick="remediateFile('${escapeHTML(a.path)}')" class="px-3 py-1 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 rounded text-xs border border-cyan-500/30 transition">
+              Accept as New Baseline
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function inspectFileByPath(path) {
+      const f = virtualFS.find(item => item.path === path);
+      if (f) inspectFileById(f.id);
+    }
+
+    function renderAuditLogs() {
+      const tbody = document.getElementById('audit-log-body');
+      tbody.innerHTML = "";
+
+      if (auditLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No events logged yet.</td></tr>`;
+        return;
+      }
+
+      auditLogs.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-900/60";
+
+        let sevClass = "text-cyan-400";
+        if (l.severity === "CRITICAL") sevClass = "text-rose-400 font-bold";
+        else if (l.severity === "HIGH") sevClass = "text-amber-400 font-semibold";
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-4 text-slate-400">${escapeHTML(l.timestamp)}</td>
+          <td class="py-2.5 px-4 ${sevClass}">[${escapeHTML(l.severity)}]</td>
+          <td class="py-2.5 px-4 text-slate-200">${escapeHTML(l.type)}</td>
+          <td class="py-2.5 px-4 text-slate-300 font-sans">${escapeHTML(l.path)}</td>
+          <td class="py-2.5 px-4 text-slate-400 font-sans">${escapeHTML(l.details)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openFileEditor(id) {
+      const file = virtualFS.find(f => f.id === id);
+      if (!file) return;
+
+      activeEditingFileId = id;
+      document.getElementById('modal-file-name').textContent = file.path;
+      document.getElementById('modal-file-perms').value = file.permissions;
+      document.getElementById('modal-file-owner').value = file.owner;
+      document.getElementById('modal-file-content').value = file.content;
+      document.getElementById('modal-baseline-hash').textContent = file.baselineHash || 'No baseline set';
+
+      updateModalLiveHash();
+      document.getElementById('modal-file-content').oninput = updateModalLiveHash;
+      document.getElementById('modal-file-perms').oninput = updateModalLiveHash;
+
+      document.getElementById('file-editor-modal').classList.remove('hidden');
+    }
+
+    async function updateModalLiveHash() {
+      const content = document.getElementById('modal-file-content').value;
+      const perms = document.getElementById('modal-file-perms').value;
+      const h = await sha256(content + perms);
+      document.getElementById('modal-live-hash').textContent = h;
+    }
+
+    function closeFileEditorModal() {
+      document.getElementById('file-editor-modal').classList.add('hidden');
+      activeEditingFileId = null;
+    }
+
+    async function saveFileEdits() {
+      if (!activeEditingFileId) return;
+      const file = virtualFS.find(f => f.id === activeEditingFileId);
+      if (!file) return;
+
+      file.content = document.getElementById('modal-file-content').value;
+      file.permissions = document.getElementById('modal-file-perms').value;
+      file.owner = document.getElementById('modal-file-owner').value;
+
+      const newHash = await sha256(file.content + file.permissions);
+      file.currentHash = newHash;
+
+      if (file.currentHash !== file.baselineHash) {
+        file.status = "MODIFIED";
+        createAlert("FILE_MODIFIED", "CRITICAL", file.path, file.baselineHash, file.currentHash, "File manually altered in inspection editor.");
+      } else {
+        file.status = "HEALTHY";
+      }
+
+      closeFileEditorModal();
+      showToast("File Updated", `Recalculated SHA-256 for ${file.path}`, "info");
+      updateDashboardUI();
+      renderFileInspectorDetails(file.id);
+    }
+
+    function deleteVirtualFile(id) {
+      const file = virtualFS.find(f => f.id === id);
+      if (!file) return;
+
+      file.status = "DELETED";
+      createAlert("FILE_DELETED", "CRITICAL", file.path, file.baselineHash, "N/A", "Monitored file manually removed.");
+      showToast("File Deleted", `Simulated removal of ${file.path}`, "alert");
+      updateDashboardUI();
+      renderFileInspectorDetails(id);
+    }
+
+    async function remediateFile(path) {
+      const file = virtualFS.find(f => f.path === path);
+      if (file) {
+        file.baselineHash = file.currentHash;
+        file.baselineContent = file.content;
+        file.baselinePermissions = file.permissions;
+        file.baselineOwner = file.owner;
+        file.baselineTime = new Date().toLocaleTimeString();
+        file.status = "HEALTHY";
+      }
+      alerts = alerts.filter(a => a.path !== path);
+      logAudit("INFO", "REMEDIATION", path, "Security officer approved changes and re-baselined cryptographic hash.");
+      showToast("Remediated", `New baseline registered for ${path}`, "success");
+      updateDashboardUI();
+      if (file) renderFileInspectorDetails(file.id);
+    }
+
+    function openAddFileModal() {
+      const newPath = prompt("Enter filepath to monitor (e.g., /opt/app/config.json):");
+      if (!newPath || !newPath.trim()) return;
+
+      const newFile = {
+        id: "file-" + Date.now(),
+        path: newPath.trim(),
+        description: "Custom Monitored Application Asset",
+        permissions: "-rw-r--r-- (644)",
+        baselinePermissions: "-rw-r--r-- (644)",
+        owner: "root:root",
+        baselineOwner: "root:root",
+        content: `{\n  "service": "CustomApp",\n  "monitored": true\n}`,
+        baselineContent: `{\n  "service": "CustomApp",\n  "monitored": true\n}`,
+        baselineHash: "",
+        currentHash: "",
+        status: "HEALTHY",
+        isNew: false,
+        lastChecked: new Date().toLocaleTimeString(),
+        baselineTime: new Date().toLocaleTimeString()
+      };
+
+      sha256(newFile.content + newFile.permissions).then(h => {
+        newFile.baselineHash = h;
+        newFile.currentHash = h;
+        virtualFS.unshift(newFile);
+        logAudit("INFO", "WATCH_ADDED", newFile.path, "Added new file path to FIM watchdog registry.");
+        showToast("Path Added", `Now monitoring ${newFile.path}`, "success");
+        updateDashboardUI();
+        populateInspectorDropdown();
+        inspectFileById(newFile.id);
+      });
+    }
+
+    async function handleUserFileUpload(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      const resultsDiv = document.getElementById('real-file-results');
+      const listContainer = document.getElementById('real-file-list');
+      resultsDiv.classList.remove('hidden');
+
+      for (let file of files) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          const buffer = e.target.result;
+          const hash = await computeFileBufferHash(buffer);
+          
+          const card = document.createElement('div');
+          card.className = "bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2";
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center space-x-2">
+                <i data-lucide="file-check" class="w-4 h-4 text-emerald-400"></i>
+                <span class="font-bold text-white">${escapeHTML(file.name)}</span>
+                <span class="text-slate-500 font-mono">(${(file.size / 1024).toFixed(2)} KB)</span>
+              </div>
+              <div class="text-[11px] font-mono text-cyan-400 mt-1 select-all break-all">
+                SHA-256: ${hash}
+              </div>
+            </div>
+            <button onclick="copyToClipboard('${hash}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-[11px] flex items-center gap-1 self-start sm:self-center">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
+            </button>
+          `;
+          listContainer.prepend(card);
+          lucide.createIcons();
+          showToast("Hash Computed", `SHA-256 generated for ${file.name}`, "success");
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    }
+
+    function switchTab(tab) {
+      const tabs = ['files', 'inspector', 'alerts', 'audit', 'custom'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const view = document.getElementById(`tab-view-${t}`);
+        if (!btn || !view) return;
+        if (t === tab) {
+          btn.className = "px-3.5 py-2 rounded-lg bg-cyber-card text-cyan-400 border border-cyber-border font-semibold flex items-center gap-2 text-xs sm:text-sm";
+          view.classList.remove('hidden');
+        } else {
+          btn.className = "px-3.5 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2 text-xs sm:text-sm";
+          view.classList.add('hidden');
+        }
+      });
+
+      if (tab === 'inspector') {
+        populateInspectorDropdown();
+        renderFileInspectorDetails(currentInspectorFileId);
+      }
+
+      lucide.createIcons();
+    }
+
+    function filterFileList() {
+      renderFilesTable();
+      lucide.createIcons();
+    }
+
+    function exportBaselineJSON() {
+      const exportData = {
+        tool: "AegisGuard FIM",
+        version: "2.5-enterprise",
+        timestamp: new Date().toISOString(),
+        algorithm: "SHA-256",
+        baselineRecords: virtualFS.map(f => ({
+          filepath: f.path,
+          permissions: f.permissions,
+          owner: f.owner,
+          baselineHash: f.baselineHash,
+          currentHash: f.currentHash,
+          status: f.status
+        }))
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `fim_baseline_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Baseline Exported", "Downloaded JSON cryptographic baseline dataset.", "info");
+    }
+
+    function exportAuditReport(format) {
+      if (format === 'csv') {
+        let csvContent = "data:text/csv;charset=utf-8,Timestamp,Severity,EventType,FilePath,Details\n";
+        auditLogs.forEach(l => {
+          csvContent += `"${l.timestamp}","${l.severity}","${l.type}","${l.path}","${l.details.replace(/"/g, '""')}"\n`;
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `fim_audit_trail_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        showToast("Report Exported", "Generated CSV format audit logs.", "info");
+      }
+    }
+
+    function printSecurityReport() {
+      const originalTitle = document.title;
+      document.title = "FIM_Security_Compliance_Audit_Report";
+      window.print();
+      document.title = originalTitle;
+    }
+
+    function togglePythonCodeModal() {
+      const modal = document.getElementById('python-modal');
+      modal.classList.toggle('hidden');
+      lucide.createIcons();
+    }
+
+    function copyPythonCode() {
+      const code = document.getElementById('python-code-content').innerText;
+      copyToClipboard(code);
+      const btn = document.getElementById('btn-copy-code');
+      btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Copied!`;
+      lucide.createIcons();
+      setTimeout(() => {
+        btn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Code`;
+        lucide.createIcons();
+      }, 2000);
+    }
+
+    function copyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Copied to Clipboard", "Checksum copied safely.", "info");
+      } catch (err) {
+        console.error("Copy failed", err);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function showToast(title, message, type = "info") {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      let borderCol = "border-cyan-500/40";
+      let icon = "info";
+      let iconCol = "text-cyan-400";
+
+      if (type === "alert") {
+        borderCol = "border-rose-500/50 bg-rose-950/80";
+        icon = "shield-alert";
+        iconCol = "text-rose-400";
+      } else if (type === "success") {
+        borderCol = "border-emerald-500/40 bg-slate-900/95";
+        icon = "check-circle";
+        iconCol = "text-emerald-400";
+      } else {
+        borderCol = "border-cyan-500/40 bg-slate-900/95";
+      }
+
+      toast.className = `pointer-events-auto p-3.5 rounded-xl border ${borderCol} shadow-2xl backdrop-blur-md flex items-center space-x-3 text-xs transition transform duration-300 max-w-sm`;
+      toast.innerHTML = `
+        <i data-lucide="${icon}" class="w-5 h-5 ${iconCol} shrink-0"></i>
+        <div class="flex-1">
+          <p class="font-bold text-white">${escapeHTML(title)}</p>
+          <p class="text-slate-300 text-[11px] mt-0.5">${escapeHTML(message)}</p>
+        </div>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeSystem();
+      lucide.createIcons();
+
+      const dropzone = document.getElementById('dropzone');
+      if (dropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+          dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-cyan-400', 'bg-cyan-500/5');
+          }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+          dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-cyan-400', 'bg-cyan-500/5');
+          }, false);
+        });
+        dropzone.addEventListener('drop', (e) => {
+          const dt = e.dataTransfer;
+          const files = dt.files;
+          handleUserFileUpload({ target: { files: files } });
+        }, false);
+      }
+    });
+  </script>
+</body>
+</html>
